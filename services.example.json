@@ -1,0 +1,38 @@
+{
+  "_comment": "Beispiel-Registry. Die echte services.json liegt daneben und traegt die realen Dienste; diese Datei zeigt die Form und ist zugleich das, was im oeffentlichen Auszug des Repos steht. EINE Wahrheit bleibt es trotzdem: die nginx-Konfiguration wird beim Start aus der Registry gerendert (render_nginx.py), die API liest dieselbe Datei fuers Wecken und Einschlafen. Neue Dienste eintragen statt Code aendern.",
+  "_felder": {
+    "name": "Kurzname, taucht in URL /wake/<name>, Logdateiname und Status auf",
+    "container": "Name des Ziel-Containers",
+    "upstream": "host:port INNERHALB des Docker-Netzes (nicht der veroeffentlichte Port)",
+    "listen": "Port, den der Wecker stellvertretend uebernimmt — muss zum ports-Eintrag in docker-compose.yml passen",
+    "idle_timeout_s": "Sekunden ohne Zugriff, nach denen der Dienst wieder schlafen gelegt wird. 0 = nie automatisch stoppen",
+    "titel": "Klartextname fuer die Warteseite",
+    "start_timeout_s": "So lange gilt ein frisch geweckter Dienst als 'startet gerade' (schuetzt vor Einschlafen waehrend des Bootens)",
+    "begleiter": "Weitere Container, die der Dienst zum Laufen braucht (z.B. seine Datenbank). Werden VOR dem Hauptcontainer gestartet und NACH ihm gestoppt."
+  },
+  "no_wake_sources": [],
+  "_no_wake_comment": "Adressen, die nichts wecken duerfen. Meist besser leer lassen: eine IP-Sperre trifft auch echte Nutzung, die zufaellig von derselben Adresse kommt. Ueberwachung stattdessen ueber den Pfad /_wake_health fuehren, der immer antwortet, nie weckt und nicht als Nutzung zaehlt.",
+  "services": [
+    {
+      "name": "shop",
+      "container": "shop-web",
+      "upstream": "shop-web:80",
+      "listen": 8091,
+      "idle_timeout_s": 1800,
+      "start_timeout_s": 90,
+      "titel": "Beispiel-Shop",
+      "begleiter": [
+        "shop-db"
+      ]
+    },
+    {
+      "name": "archiv",
+      "container": "archiv",
+      "upstream": "archiv:8080",
+      "listen": 8140,
+      "idle_timeout_s": 1800,
+      "start_timeout_s": 30,
+      "titel": "Archiv-Server"
+    }
+  ]
+}
