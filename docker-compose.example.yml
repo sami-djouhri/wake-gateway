@@ -1,0 +1,155 @@
+# wake-gateway — Beispiel-Aufstellung.
+#
+# Der Wecker uebernimmt die veroeffentlichten Ports der schlafenden Dienste.
+# Deshalb duerfen die Zieldienste ihre Ports NICHT mehr selbst publizieren
+# (sonst Portkonflikt beim Wecken) — sie sind nur noch im Docker-Netz
+# erreichbar und stehen auf `restart: "no"`, damit der Wecker allein ueber
+# ihren Lebenszyklus bestimmt.
+#
+# Die Portliste unten muss zu `listen` in der Registry passen. Die API meldet
+# eine Abweichung unter /status.
+
+services:
+  # Init-Schritt: rendert die nginx-Konfiguration aus der Registry und endet.
+  wake-render:
+    build: .
+    image: wake-gateway-api
+    container_name: wake-render
+    user: "0:0"   # schreibt in das nginx-Konfigvolume
+    command: ["python", "/app/render_nginx.py"]
+    volumes:
+      - nginx-conf:/etc/nginx/conf.d
+      - ./services.json:/app/services.json:ro
+    restart: "no"
+    networks:
+      - wake-intern
+
+  wake-gateway:
+    image: nginx@sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9fcb2a616aa470620e5b46  # nginx:stable-alpine 1.30.4, gepinnt 2026-08-22 (war 1.27-alpine/1.27.5 = 2 CRIT / 33 HIGH -> 0 / 0)
+    container_name: wake-gateway
+    restart: unless-stopped
+    depends_on:
+      wake-render:
+        condition: service_completed_successfully
+    ports:
+      # Je Dienst der Port, den der Wecker stellvertretend haelt.
+      - "127.0.0.1:8091:8091"    # shop
+      - "8140:8140"              # archiv
+    volumes:
+      - nginx-conf:/etc/nginx/conf.d:ro
+      - wake-logs:/var/log/wake
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8091/_wake_health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - wake-intern
+      # Dazu je ein externes Netz pro Zieldienst, damit der Wecker ihn
+      # ueber seinen Container-Namen erreicht.
+      - beispiel-net
+
+  wake-api:
+    build: .
+    image: wake-gateway-api
+    container_name: wake-api
+    restart: unless-stopped
+    depends_on:
+      - wake-socket-proxy
+    environment:
+      REGISTRY_PATH: /app/services.json
+      WAKE_LOG_DIR: /var/log/wake
+      DOCKER_API: http://wake-socket-proxy:2375
+      REAP_INTERVAL_S: "60"
+    volumes:
+      - ./services.json:/app/services.json:ro
+      - wake-logs:/var/log/wake:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 192m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - wake-intern
+
+  # Minimal berechtigter Zugang zur Docker-API: nur Container ansehen,
+  # starten und stoppen. Kein exec, kein Neustart, kein Bauen.
+  wake-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    container_name: wake-socket-proxy
+    restart: unless-stopped
+    environment:
+      CONTAINERS: "1"
+      POST: "1"
+      ALLOW_START: "1"
+      ALLOW_STOP: "1"
+      ALLOW_RESTARTS: "0"
+      EXEC: "0"
+      IMAGES: "0"
+      NETWORKS: "0"
+      VOLUMES: "0"
+      INFO: "0"
+      AUTH: "0"
+      BUILD: "0"
+      COMMIT: "0"
+      CONFIGS: "0"
+      DISTRIBUTION: "0"
+      NODES: "0"
+      PLUGINS: "0"
+      SECRETS: "0"
+      SERVICES: "0"
+      SESSION: "0"
+      SWARM: "0"
+      SYSTEM: "0"
+      TASKS: "0"
+    volumes:
+      # Bewusst read-only gemountet. Kein `read_only: true` am Container —
+      # das Image schreibt seine haproxy.cfg zur Laufzeit selbst.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 64m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - wake-intern
+
+volumes:
+  nginx-conf:
+  wake-logs:
+
+networks:
+  # Festes Subnetz statt Auto-Vergabe: die Auto-Vergabe kann ein bestehendes
+  # LAN ueberdecken, was hier schon einmal passiert ist.
+  wake-intern:
+    ipam:
+      config:
+        - subnet: 172.32.80.0/24
+  beispiel-net:
+    external: true
