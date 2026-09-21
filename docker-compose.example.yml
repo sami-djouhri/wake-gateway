@@ -1,8 +1,8 @@
-# wake-gateway — Beispiel-Aufstellung.
+# wake-gateway: Beispiel-Aufstellung.
 #
 # Der Wecker uebernimmt die veroeffentlichten Ports der schlafenden Dienste.
 # Deshalb duerfen die Zieldienste ihre Ports NICHT mehr selbst publizieren
-# (sonst Portkonflikt beim Wecken) — sie sind nur noch im Docker-Netz
+# (sonst Portkonflikt beim Wecken): sie sind nur noch im Docker-Netz
 # erreichbar und stehen auf `restart: "no"`, damit der Wecker allein ueber
 # ihren Lebenszyklus bestimmt.
 #
@@ -130,7 +130,7 @@ services:
       SYSTEM: "0"
       TASKS: "0"
     volumes:
-      # Bewusst read-only gemountet. Kein `read_only: true` am Container —
+      # Bewusst read-only gemountet. Kein `read_only: true` am Container:
       # das Image schreibt seine haproxy.cfg zur Laufzeit selbst.
       - /var/run/docker.sock:/var/run/docker.sock:ro
     security_opt:
