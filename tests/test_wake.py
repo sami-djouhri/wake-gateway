@@ -1,4 +1,4 @@
-"""Tests fuer die Grenzen des Weckers — Anzahl-Deckel und Speicherboden.
+"""Tests fuer die Grenzen des Weckers: Anzahl-Deckel und Speicherboden.
 
 Laeuft ohne Testframework, weil das Abbild keins enthaelt und der Dienst sonst
 nur drei Abhaengigkeiten hat. Aufruf (aus dem Projektverzeichnis):
@@ -7,7 +7,7 @@ nur drei Abhaengigkeiten hat. Aufruf (aus dem Projektverzeichnis):
         wake-gateway-api python /tests/test_wake.py
 
 Der Schwerpunkt liegt auf `platz_schaffen`: dort entscheidet sich, ob ein
-Dienst startet, wartet oder verdraengt — und dort kann ein Fehler entweder den
+Dienst startet, wartet oder verdraengt, und dort kann ein Fehler entweder den
 Wirt ueberlasten oder Besucher grundlos aussperren.
 """
 

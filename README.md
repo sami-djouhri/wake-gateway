@@ -125,5 +125,6 @@ The registry of the actual services and the compose file that wires them into
 their networks stayed behind, since together they amount to an inventory of what
 runs here. The example files next to them carry the same shape.
 
-One commit, because the history stays private. The gateway runs at home in front
-of real services, and the ports it holds are the ones I use myself.
+The development history stays private, so the public one starts at the first
+release and grows with each later one. The gateway runs at home in front of real
+services, and the ports it holds are the ones I use myself.

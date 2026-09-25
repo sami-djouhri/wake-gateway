@@ -41,7 +41,7 @@ RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin wecker
 # angelegt und uebereignet werden: Docker uebernimmt Eigentuemer und Rechte
 # eines Image-Verzeichnisses nur dann in ein Named Volume, wenn das Volume
 # beim Einhaengen leer ist. Legt man sie erst zur Laufzeit an, gehoert das
-# frische Volume root — und der unprivilegierte Dienst bekommt beim Schreiben
+# frische Volume root, und der unprivilegierte Dienst bekommt beim Schreiben
 # ein 'Permission denied', das erst auffaellt, wenn ein Neustart den
 # vermeintlich gesetzten Schutz verschluckt hat.
 RUN mkdir -p /var/lib/wake && chown 10001:10001 /var/lib/wake

@@ -4,15 +4,15 @@
     "name": "Kurzname, taucht in URL /wake/<name>, Logdateiname und Status auf",
     "container": "Name des Ziel-Containers",
     "upstream": "host:port INNERHALB des Docker-Netzes (nicht der veroeffentlichte Port)",
-    "listen": "Port, den der Wecker stellvertretend uebernimmt — muss zum ports-Eintrag in docker-compose.yml passen",
+    "listen": "Port, den der Wecker stellvertretend uebernimmt, muss zum ports-Eintrag in docker-compose.yml passen",
     "idle_timeout_s": "Sekunden ohne Zugriff, nach denen der Dienst wieder schlafen gelegt wird. 0 = nie automatisch stoppen",
     "titel": "Klartextname fuer die Warteseite",
     "start_timeout_s": "So lange gilt ein frisch geweckter Dienst als 'startet gerade' (schuetzt vor Einschlafen waehrend des Bootens)",
     "begleiter": "Weitere Container, die der Dienst zum Laufen braucht (z.B. seine Datenbank). Werden VOR dem Hauptcontainer gestartet und NACH ihm gestoppt.",
     "bedarf_mb": "Was dieser Dienst samt Begleitern im schlechtesten Fall braucht. Geprueft wird: freier Speicher - bedarf_mb muss >= reserve_mb bleiben, sonst startet er nicht. 0 oder fehlend = keine Pruefung fuer diesen Dienst."
   },
-  "_grenzen_comment": "Obergrenzen gegen Weck-Missbrauch, optional (fehlender Block = keine Grenze). max_wach deckelt die gleichzeitig wachen Dienste; ist der Deckel erreicht, wird der am laengsten unbenutzte verdraengt — aber nur, wenn er seit schutz_s niemanden mehr bedient hat, sonst wartet der neue lieber, statt einen Besucher aus seiner Sitzung zu werfen. weck_budget begrenzt Startvorgaenge je weck_fenster_s und zaehlt nur echte Starts, nicht Anfragen (sonst braeuchte die sich selbst neu ladende Warteseite ihr eigenes Budget auf). Bewusst NICHT je Absenderadresse: hinter Tunneln und veroeffentlichten localhost-Ports tragen alle Besucher dieselbe Quelle.",
-  "_reserve_comment": "reserve_mb = Speicherboden des Wirts: so viel muss NACH einem Start noch frei sein (MemAvailable, ohne Swap). Noetig, weil max_wach Dienste zaehlt und nicht Gewicht — ein Shop samt Datenbank und ein schlanker Dateiserver zaehlen gleich, brauchen aber sehr unterschiedlich viel. Reicht es nicht, wird nach derselben Politik verdraengt wie beim Deckel; hilft das nicht, bleibt der Dienst aus und der Besucher bekommt eine Warteseite — besser als ein Start, den der OOM-Killer beendet. Fehlender Wert = Pruefung aus.",
+  "_grenzen_comment": "Obergrenzen gegen Weck-Missbrauch, optional (fehlender Block = keine Grenze). max_wach deckelt die gleichzeitig wachen Dienste; ist der Deckel erreicht, wird der am laengsten unbenutzte verdraengt, aber nur, wenn er seit schutz_s niemanden mehr bedient hat, sonst wartet der neue lieber, statt einen Besucher aus seiner Sitzung zu werfen. weck_budget begrenzt Startvorgaenge je weck_fenster_s und zaehlt nur echte Starts, nicht Anfragen (sonst braeuchte die sich selbst neu ladende Warteseite ihr eigenes Budget auf). Bewusst NICHT je Absenderadresse: hinter Tunneln und veroeffentlichten localhost-Ports tragen alle Besucher dieselbe Quelle.",
+  "_reserve_comment": "reserve_mb = Speicherboden des Wirts: so viel muss NACH einem Start noch frei sein (MemAvailable, ohne Swap). Noetig, weil max_wach Dienste zaehlt und nicht Gewicht: ein Shop samt Datenbank und ein schlanker Dateiserver zaehlen gleich, brauchen aber sehr unterschiedlich viel. Reicht es nicht, wird nach derselben Politik verdraengt wie beim Deckel; hilft das nicht, bleibt der Dienst aus und der Besucher bekommt eine Warteseite, besser als ein Start, den der OOM-Killer beendet. Fehlender Wert = Pruefung aus.",
   "grenzen": {
     "max_wach": 3,
     "schutz_s": 900,
