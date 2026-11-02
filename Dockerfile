@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.15-slim
 # Sicherheitsstand des Basis-Image nachziehen. Ein Upstream-Image friert die Paketstaende
 # vom Tag seines Baus ein, Debian-security ist regelmaessig weiter, und ein `--pull` holt
 # nur ein neueres Bild derselben Verspaetung: gemessen am 2026-09-13 trug das aktuelle
