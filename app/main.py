@@ -643,6 +643,9 @@ async def status() -> JSONResponse:
             out.append(
                 {
                     "name": name,
+                    # Klartextname wie auf der Warteseite. Die Tardis-App zeigt
+                    # ihn an und kennt die Registry sonst nicht.
+                    "titel": svc.get("titel", name),
                     "container": svc["container"],
                     "laeuft": laeuft,
                     # Der Unterschied zu `laeuft` ist die eigentliche Auskunft:
