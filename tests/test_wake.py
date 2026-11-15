@@ -485,6 +485,37 @@ def test_schema_des_vorgelagerten_proxys():
            "(der node1-Fall, dort haelt der Wecker den Host-Port selbst)")
 
 
+def test_reaper_legt_halbe_dienste_schlafen():
+    print("reaper: auch ein halb laufender Dienst wird schlafen gelegt")
+    import importlib
+    m = importlib.reload(main)
+    c = ZustandsClient({
+        "oberflaeche": {"Running": True, "Health": {"Status": "healthy"}},
+        "api": {"Running": False},
+        "ganz_aus": {"Running": False},
+    })
+    gestoppt = []
+
+    async def stoppen(client, svc):
+        gestoppt.append(svc["name"])
+
+    m.dienst_stoppen = stoppen
+    m.last_seen = lambda name: 0.0
+    m.in_wartung = lambda name: False
+    m._woken_at.clear()
+    m._registry = {"services": {
+        "tagebuch": {"name": "tagebuch", "container": "oberflaeche",
+                     "begleiter": ["api"], "idle_timeout_s": 1800},
+        "schlaeft": {"name": "schlaeft", "container": "ganz_aus",
+                     "idle_timeout_s": 1800},
+    }}
+    asyncio.run(m.reap_durchlauf(c, 10_000.0))
+    pruefe(gestoppt == ["tagebuch"],
+           "Oberflaeche ohne API wird gestoppt, ein ganz gestoppter Dienst nicht")
+    pruefe(asyncio.run(m.dienst_laeuft(c, m._registry["services"]["tagebuch"])) is False,
+           "fuer den Start-Entscheid gilt der halbe Dienst weiter als nicht laufend")
+
+
 if __name__ == "__main__":
     for fn in (
         test_speicher_reicht,
@@ -500,6 +531,7 @@ if __name__ == "__main__":
         test_warteseite_zustaende,
         test_container_zustand,
         test_dienst_bereit_kette,
+        test_reaper_legt_halbe_dienste_schlafen,
         test_warten_auf_bereitschaft,
         test_nutzung_am_statuscode,
         test_spur_auswerten,

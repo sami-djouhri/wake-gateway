@@ -851,6 +851,45 @@ async def wake(name: str, request: Request) -> HTMLResponse:
     )
 
 
+async def dienst_teilweise_an(client: httpx.AsyncClient, svc: dict) -> bool:
+    """Laeuft irgendein Container des Dienstes? Die Frage des Reapers.
+
+    Nicht dasselbe wie `dienst_laeuft`: dort muss die ganze Kette laufen, weil
+    am Start-Entscheid das Weck-Budget haengt. Fuer das Schlafenlegen reicht
+    ein einziger laufender Container. Fragte der Reaper `dienst_laeuft`, bliebe
+    ein Dienst, dessen Begleiter schon steht, fuer immer halb an: die
+    Oberflaeche liefe weiter, und kein Durchlauf faesste sie je wieder an.
+    """
+    for name in container_kette(svc):
+        if await container_running(client, name):
+            return True
+    return False
+
+
+async def reap_durchlauf(client: httpx.AsyncClient, jetzt: float) -> list[str]:
+    """Ein Durchlauf des Reapers. Gibt die schlafen gelegten Dienste zurueck."""
+    gestoppt = []
+    for name, svc in _registry.get("services", {}).items():
+        timeout = svc.get("idle_timeout_s", 0)
+        if not timeout:
+            continue
+        if in_wartung(name):
+            continue
+        # Frisch geweckte Dienste bekommen ihre Startzeit zugestanden.
+        geweckt = _woken_at.get(name, 0.0)
+        if jetzt - geweckt < svc.get("start_timeout_s", 90):
+            continue
+        leerlauf = jetzt - last_seen(name)
+        if leerlauf < timeout:
+            continue
+        if not await dienst_teilweise_an(client, svc):
+            continue
+        log.info("lege %s schlafen (%d s ohne Zugriff)", name, int(leerlauf))
+        await dienst_stoppen(client, svc)
+        gestoppt.append(name)
+    return gestoppt
+
+
 async def reaper() -> None:
     """Legt Dienste schlafen, die laenger als vereinbart nicht genutzt wurden."""
     global _registry
@@ -858,26 +897,7 @@ async def reaper() -> None:
         await asyncio.sleep(REAP_INTERVAL_S)
         try:
             _registry = load_registry()
-            jetzt = time.time()
             async with httpx.AsyncClient(base_url=DOCKER_API, timeout=30) as client:
-                for name, svc in _registry.get("services", {}).items():
-                    timeout = svc.get("idle_timeout_s", 0)
-                    if not timeout:
-                        continue
-                    if in_wartung(name):
-                        continue
-                    # Frisch geweckte Dienste bekommen ihre Startzeit zugestanden.
-                    geweckt = _woken_at.get(name, 0.0)
-                    if jetzt - geweckt < svc.get("start_timeout_s", 90):
-                        continue
-                    leerlauf = jetzt - last_seen(name)
-                    if leerlauf < timeout:
-                        continue
-                    if not await dienst_laeuft(client, svc):
-                        continue
-                    log.info(
-                        "lege %s schlafen (%d s ohne Zugriff)", name, int(leerlauf)
-                    )
-                    await dienst_stoppen(client, svc)
+                await reap_durchlauf(client, time.time())
         except Exception as exc:  # pragma: no cover - Dauerlaeufer nie sterben lassen
             log.error("Reaper-Durchlauf fehlgeschlagen: %s", exc)
