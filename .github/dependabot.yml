@@ -20,3 +20,7 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "deps"
+    ignore:
+      # Python-Spruenge ziehen alle Dienste gemeinsam nach, nicht einzeln per PR.
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
